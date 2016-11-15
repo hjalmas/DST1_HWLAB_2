@@ -25,13 +25,21 @@
 
 /**
  * -----------------------------------------------------------------------------------------------------
+ * 											USED COMPONENTS
+ * -----------------------------------------------------------------------------------------------------
+ */
+#define USE_TEXTFIELD
+#define USE_TEXTFEED
+
+/**
+ * -----------------------------------------------------------------------------------------------------
  * 												DEFINES
  * -----------------------------------------------------------------------------------------------------
  */
 
 /**
  * -----------------------------------------------------------------------------------------------------
- * 												TYPEDEFS, variables
+ * 										   TYPEDEFS, variables
  * -----------------------------------------------------------------------------------------------------
  */
 typedef struct TextField {
@@ -46,17 +54,27 @@ typedef struct TextField {
 
 TextField_t* selectedTextField; /* the currently selected TextField */
 
+typedef struct TextFeed {
+	char strings[16][40];		/* The strings displayed in this TextFeed */
+	uint16_t head;				/* The index of the first string */
+	uint16_t tail;				/* The index of the last added string */
+	uint16_t size;
+	uint16_t row;				/* Row of the first character */
+	uint16_t col;				/* column of the first character, defines location for the TextFeed */
+	uint16_t width;				/* width in terms of characters */
+	uint16_t height;			/* height in terms of characters */
+} TextFeed_t;
+
 /**
  * -----------------------------------------------------------------------------------------------------
  * 												PROTOTYPES
  * -----------------------------------------------------------------------------------------------------
  */
-
 /**
  * Creates a TextField.
  */
 void gui_TextField_init(
-		TextField_t* result,
+		TextField_t* field,
 		char* initText,
 		uint16_t row,				/* Row of the first character */
 		uint16_t col,				/* column of the first character, defines location for the TextField */
@@ -84,5 +102,25 @@ void gui_TextField_setText(TextField_t* field, char* text);
  */
 void gui_handle_keypress(char ch);
 
+/*
+ * Creates a TextFeed.
+ */
+void gui_TextFeed_init(
+		TextFeed_t* feed,
+		uint16_t row,				/* Row of the first character */
+		uint16_t col,				/* column of the first character, defines location for the TextFeed */
+		uint16_t width,				/* width in terms of characters */
+		uint16_t height				/* height in terms of characters */
+);
+
+/*
+ * Displays the TextFeed on the screen.
+ */
+void gui_TextFeed_show(TextFeed_t* feed);
+
+/**
+ * Adds a string to the TextFeed.
+ */
+void gui_TextFeed_puts(TextFeed_t* feed, char* text);
 
 #endif /* GUI_COMPONENTS_H_ */

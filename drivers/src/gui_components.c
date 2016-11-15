@@ -33,9 +33,12 @@ extern uint16_t currFrame;
  * -----------------------------------------------------------------------------------------------------
  */
 static void print_TextField(TextField_t* field);
+static void print_TextFeed(TextFeed_t* feed);
 static void clear_TextField(TextField_t* field);
+static void clear_TextFeed(TextFeed_t* feed);
 static void set_TextFieldFocus(TextField_t* field);
 static void set_addressPointer(uint16_t row, uint16_t col);
+static uint16_t inc(uint16_t* pVal);
 
 /**
  * -----------------------------------------------------------------------------------------------------
@@ -98,6 +101,8 @@ void gui_TextField_setText(TextField_t* field, char* text) {
 	field->text[length] = '\0';
 	clear_TextField(field);
 	print_TextField(field);
+
+	set_TextFieldFocus(selectedTextField);
 }
 
 /**
@@ -122,6 +127,58 @@ void gui_handle_keypress(char ch) {
 		f->text[length + 1] = '\0';
 		print_TextField(f);
 	}
+}
+
+/*
+ * Creates a TextFeed.
+ */
+void gui_TextFeed_init(
+		TextFeed_t* feed,
+		uint16_t row,				/* Row of the first character */
+		uint16_t col,				/* column of the first character, defines location for the TextFeed */
+		uint16_t width,				/* width in terms of characters */
+		uint16_t height				/* height in terms of characters */
+	) {
+	feed->head = 0;
+	feed->tail = 0;
+	feed->size = 0;
+	feed->row = row;
+	feed->col = col;
+	feed->width = width;
+	feed->height = height;
+}
+
+/*
+ * Displays the TextFeed on the screen.
+ */
+void gui_TextFeed_show(TextFeed_t* feed) {
+	volatile uint16_t width = (feed->width + 1) * 6 + 3;
+	volatile uint16_t x0 = (feed->col - 1) * 6 - 1, y0 = (feed->row - 1) * 8 - 2;
+	volatile uint16_t height = feed->height * 8 + 3;
+	graph_draw_rect(x0, y0, width, height);
+
+	set_TextFieldFocus(selectedTextField);
+}
+
+/**
+ * Adds a string to the TextFeed.
+ */
+void gui_TextFeed_puts(TextFeed_t* feed, char* text) {
+
+	if(feed->size == 0) {
+		strcpy(feed->strings[0], text);
+		feed->size++;
+	} else if(feed->size < feed->height) {
+		strcpy(feed->strings[inc(&(feed->tail))], text);
+		feed->size++;
+	} else {
+		strcpy(feed->strings[inc(&(feed->tail))], text);
+		inc(&(feed->head));
+	}
+
+	print_TextFeed(feed);
+
+	set_TextFieldFocus(selectedTextField);
 }
 
 /**
@@ -149,6 +206,22 @@ static void print_TextField(TextField_t* field) {
 }
 
 /**
+ * Prints the text in a TextFeed.
+ */
+static void print_TextFeed(TextFeed_t* feed) {
+
+	clear_TextFeed(feed);
+
+	volatile uint16_t idx = feed->head;
+	volatile uint16_t cnt = 0;
+	while(cnt < feed->size) {
+		graph_print_text(feed->strings[idx], feed->row + cnt, feed->col, TEXT_ALIGN_LEFT);
+		inc(&idx);
+		cnt++;
+	}
+}
+
+/**
  * Clears a TextField.
  */
 static void clear_TextField(TextField_t* field) {
@@ -162,16 +235,32 @@ static void clear_TextField(TextField_t* field) {
 }
 
 /**
+ * Clears a TextFeed.
+ */
+static void clear_TextFeed(TextFeed_t* feed) {
+	for(int i=0; i<feed->height; i++) {
+		volatile uint16_t startAddress = currTxtFrame
+				+ (uint16_t) (40 * (feed->row + i) + feed->col - 41);
+		disp_wr_hword(SET_ADDRESS_PIONTER, startAddress);
+		for (unsigned int j = 0; j <= feed->width; j++) {
+			disp_wr_byte(DATA_WR_INC_ADP, 0);
+		}
+	}
+}
+
+/**
  * Sets the cursor i.e. the focus on this textfield.
  */
 static void set_TextFieldFocus(TextField_t* field) {
-	size_t strLength = strlen(field->text);
+	if(field != NULL) {
+		size_t strLength = strlen(field->text);
 
-	/* Avoid setting the cursor outside of the TextField */
-	if(strLength > field->width) {
-		set_addressPointer(field->row, field->col + field->width);
-	} else {
-		set_addressPointer(field->row, field->col + strLength);
+		/* Avoid setting the cursor outside of the TextField */
+		if(strLength > field->width) {
+			set_addressPointer(field->row, field->col + field->width);
+		} else {
+			set_addressPointer(field->row, field->col + strLength);
+		}
 	}
 }
 
@@ -181,5 +270,15 @@ static void set_TextFieldFocus(TextField_t* field) {
 static void set_addressPointer(uint16_t row, uint16_t col) {
 	volatile uint16_t startAddress = currTxtFrame + (40 * row + col - 41);
 	disp_wr_hword(SET_ADDRESS_PIONTER, startAddress);
+}
+
+static uint16_t inc(uint16_t* pVal) {
+	if(*pVal < 15) {
+		(*pVal)++;
+	} else {
+		*pVal = 0;
+	}
+
+	return *pVal;
 }
 
